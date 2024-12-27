@@ -112,7 +112,7 @@ void compute_risk_indices(const std::vector<float>& temperature,
 
 void generate_rbi_reports(int device_id) {
     try {
-        std::cout << "Generating RBI reports for device_id = " << device_id
+        std::cout << "Generating RBI reports for device_id = " << device_id;
         const auto* psql_conn_str = std::getenv("POSTGRES_CONNECTION_STRING");
 
         // Initialize DAO
