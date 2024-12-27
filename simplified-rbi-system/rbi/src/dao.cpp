@@ -11,7 +11,7 @@ Dao::RBIReportsDao::RBIReportsDao(char const* psql_conn_str) {
     if (PQstatus(conn) != CONNECTION_OK) {
         throw std::runtime_error(PQerrorMessage(conn));
     } else {
-        std::cout << "Connected to database\n";
+        std::cout << "Connected to database" << std::endl;
     }
 }
 

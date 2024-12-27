@@ -148,8 +148,8 @@ int main() {
 
     while (true) {
         // TODO replace hardcoded device ids
-        generate_rbi_reports(1);
-        generate_rbi_reports(2);        
+        generate_rbi_reports(1, rbiReportsDao);
+        generate_rbi_reports(2, rbiReportsDao);        
         std::cout << "Finished RBI risk calculation at " << get_current_timestamp() << std::endl;
         usleep(3000000); // 3-second delay
     }

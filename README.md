@@ -15,12 +15,19 @@ docker run --device=/dev/dri --entrypoint /app/$APP_NAME $APP_NAME:latest
 ```
 
 ### simplified-rbi-system
+
 A couple of microservices emulating the system which:
 - collects metrics from devices
 - periodically calculates risks and generates reports
 - exposes simple api to query reports
 
-Quickstart:
+#### Requirements
+- Ubuntu 24.04
+- C++ 20
+- AMD ROCm, OpenCL
+- Docker
+
+#### Quickstart
 ```
 cd simplified-rbi-system
 docker compose build
