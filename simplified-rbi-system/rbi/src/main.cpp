@@ -110,15 +110,12 @@ void compute_risk_indices(const std::vector<float>& temperature,
     }
 }
 
-void generate_rbi_reports(int device_id) {
+void generate_rbi_reports(int device_id, Dao::RBIReportsDao& rbiReportsDao) {
     try {
         std::cout << "Generating RBI reports for device_id = " << device_id;
-        const auto* psql_conn_str = std::getenv("POSTGRES_CONNECTION_STRING");
-
-        // Initialize DAO
-        Dao::RBIReportsDao rbiReportsDao(psql_conn_str);
-        std::vector<float> temperature = rbiReportsDao.fetchMetricData(1, device_id); // Metric ID 1: Temperature
-        std::vector<float> pressure = rbiReportsDao.fetchMetricData(2, device_id);    // Metric ID 2: Pressure
+        // TODO: Right now fetchMetricData is returning every row inside the table. It'll make more sense to restrict this querying by some time range 
+        auto temperature = rbiReportsDao.fetchMetricData(1, device_id); // Metric ID 1: Temperature
+        auto pressure = rbiReportsDao.fetchMetricData(2, device_id);    // Metric ID 2: Pressure
 
         if (temperature.size() != pressure.size()) {
             throw std::runtime_error(std::format("Mismatch in temperature and pressure data sizes for device_id = {}!\n", device_id));
@@ -146,6 +143,8 @@ int main() {
         fprintf(stdout, "Sleeping for 3 seconds...\n");
         usleep(3000000);
     }
+    const auto* psql_conn_str = std::getenv("POSTGRES_CONNECTION_STRING");
+    Dao::RBIReportsDao rbiReportsDao(psql_conn_str);
 
     while (true) {
         // TODO replace hardcoded device ids
