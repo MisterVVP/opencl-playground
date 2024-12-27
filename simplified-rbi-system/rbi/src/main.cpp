@@ -112,6 +112,7 @@ void compute_risk_indices(const std::vector<float>& temperature,
 
 void generate_rbi_reports(int device_id) {
     try {
+        std::cout << "Generating RBI reports for device_id = " << device_id
         const auto* psql_conn_str = std::getenv("POSTGRES_CONNECTION_STRING");
 
         // Initialize DAO
@@ -120,7 +121,7 @@ void generate_rbi_reports(int device_id) {
         std::vector<float> pressure = rbiReportsDao.fetchMetricData(2, device_id);    // Metric ID 2: Pressure
 
         if (temperature.size() != pressure.size()) {
-            throw std::runtime_error("Mismatch in temperature and pressure data sizes.");
+            throw std::runtime_error(std::format("Mismatch in temperature and pressure data sizes for device_id = {}!\n", device_id));
         }
 
         // Compute risk indices
@@ -145,7 +146,13 @@ int main() {
         fprintf(stdout, "Sleeping for 3 seconds...\n");
         usleep(3000000);
     }
-    // TODO replace hardcoded device id
-    generate_rbi_reports(1);
+
+    while (true) {
+        // TODO replace hardcoded device ids
+        generate_rbi_reports(1);
+        generate_rbi_reports(2);        
+        std::cout << "Finished RBI risk calculation at " << get_current_timestamp() << std::endl;
+        usleep(3000000); // 3-second delay
+    }
     return 0;
 }
