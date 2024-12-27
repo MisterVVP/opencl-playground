@@ -1,0 +1,4 @@
+build
+docker compose.yaml
+**/*.vs
+**/*.vscode
