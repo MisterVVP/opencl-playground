@@ -1,6 +1,7 @@
 # opencl-playground
-OpenCL dev playground
-
+OpenCL playground to try out GPU-based code execution via [OpenCL](https://github.com/KhronosGroup/OpenCL-Guide).
+I'm using `AMD Ryzen 9 5900X CPU` and `AMD Radeon RX 6900 XT GPU`, so for now everything in this repository is tested with this AMD hardware stack.
+However, same concepts can be applied to NVIDIA and Intel hardware as well.
 
 ## Sub folders
 
@@ -28,13 +29,14 @@ A couple of microservices emulating the system which:
 - Docker
 
 #### Quickstart
+##### Run metrics-api, sensors (emulator), postgreSQL and pgAdmin via docker compose
 ```
 cd simplified-rbi-system
 docker compose build
 docker compose up
 ```
-
-Install dependencies, e.g. for Ubuntu
+##### Build `rbi` application
+Make sure to install all dependencies, e.g. for Ubuntu
 ```
 apt update && apt upgrade && apt install -y cmake git ninja-build opencl-headers opencl-clhpp-headers ocl-icd-opencl-dev libpq-dev build-essential
 ```
