@@ -4,6 +4,7 @@
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 
 #include "dao.h"
+#include "cache.h"
 #include <CL/cl.h>
 #include <CL/opencl.hpp>
 #include <vector>
@@ -26,6 +27,8 @@ __kernel void compute_risk(__global const float *temperature,
     risk[gid] = fma(temperature[gid], 0.5f, pressure[gid] * 0.3f);
 }
 )";
+
+constexpr string RISK_CACHE_KEY_FMT = "RBI_RISKS-{}";
 
 std::string get_current_timestamp() {
     auto now = std::chrono::system_clock::now();
@@ -110,26 +113,36 @@ void compute_risk_indices(const std::vector<float>& temperature,
     }
 }
 
-void generate_rbi_reports(int device_id, Dao::RBIReportsDao& rbiReportsDao) {
+
+void generate_rbi_reports(int device_id, Dao::RBIReportsDao& rbiReportsDao, Cache::RedisCache<std::vector<float>>& cache) {
     try {
-        std::cout << "Generating RBI reports for device_id = " << device_id;
-        // TODO: Right now fetchMetricData is returning every row inside the table. It'll make more sense to restrict this querying by some time range 
-        auto temperature = rbiReportsDao.fetchMetricData(1, device_id); // Metric ID 1: Temperature
-        auto pressure = rbiReportsDao.fetchMetricData(2, device_id);    // Metric ID 2: Pressure
+        auto cache_key = std::format(RISK_CACHE_KEY_FMT, device_id);
+        auto cached_risks = cache.get(cache_key);
+        if (cached_risks.empty()) {
+            std::cout << "Generating RBI reports for device_id = " << device_id;
+            // TODO: Right now fetchMetricData is returning every row inside the table. It'll make more sense to restrict this querying by some time range 
+            auto temperature = rbiReportsDao.fetchMetricData(1, device_id); // Metric ID 1: Temperature
+            auto pressure = rbiReportsDao.fetchMetricData(2, device_id);    // Metric ID 2: Pressure
 
-        if (temperature.size() != pressure.size()) {
-            throw std::runtime_error(std::format("Mismatch in temperature and pressure data sizes for device_id = {}!\n", device_id));
+            if (temperature.size() != pressure.size()) {
+                throw std::runtime_error(std::format("Mismatch in temperature and pressure data sizes for device_id = {}!\n", device_id));
+            }
+
+            // Compute risk indices
+            std::vector<float> risk(temperature.size());
+            compute_risk_indices(temperature, pressure, risk, device_id);
+            cache.set(cache_key, risk);
+            std::cout << "Saved risk indices for device " << device_id << " to cache" << std::endl;
+
+            for (size_t i = 0; i < risk.size(); ++i) {
+                rbiReportsDao.insertRBIReport(device_id, risk[i], get_current_timestamp());
+            }
+        } else {
+            std::cout << "Using cached data to generate RBI reports for device_id = " << device_id << std::endl;
+            for (size_t i = 0; i < cached_risks.size(); ++i) {
+                rbiReportsDao.insertRBIReport(device_id, cached_risks[i], get_current_timestamp());
+            }
         }
-
-        // Compute risk indices
-        std::vector<float> risk(temperature.size());
-        compute_risk_indices(temperature, pressure, risk, device_id);
-
-        // Insert computed risks into the database
-        for (size_t i = 0; i < risk.size(); ++i) {
-            rbiReportsDao.insertRBIReport(device_id, risk[i], get_current_timestamp());
-        }
-
         std::cout << "RBI reports generated successfully." << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "Error generating RBI reports: " << e.what() << std::endl;
@@ -138,20 +151,42 @@ void generate_rbi_reports(int device_id, Dao::RBIReportsDao& rbiReportsDao) {
 
 
 int main() {
+    const int three_sec_delay = 3000000;
     const auto* use_dockerized_postgres = std::getenv("USE_DOCKERIZED_POSTGRES");
     if (use_dockerized_postgres) {
         fprintf(stdout, "Sleeping for 3 seconds...\n");
-        usleep(3000000);
+        usleep(three_sec_delay);
     }
     const auto* psql_conn_str = std::getenv("POSTGRES_CONNECTION_STRING");
+    if (!psql_conn_str) {
+        std::cerr << "POSTGRES_CONNECTION_STRING is not defined" << std::endl;
+        return -1;
+    }
     Dao::RBIReportsDao rbiReportsDao(psql_conn_str);
+
+    const auto* redis_host = std::getenv("REDIS_HOST");
+    const auto* redis_port_env = std::getenv("REDIS_PORT");
+    if (!redis_port_env) {
+        std::cerr << "Value of redis port is not specified. Check environment variables." << std::endl;
+        return -1;
+    }
+    int redis_port;
+    try {
+        redis_port = std::stoi(redis_port_env);
+    }
+    catch (const exception& e) {
+        std::cerr << "Can not convert the value of REDIS_PORT environment variable to integer: " << e.what() << std::endl;
+        return -1;
+    }
+
+    Cache::RedisCache<std::vector<float>> cache(redis_host, redis_port);
 
     while (true) {
         // TODO replace hardcoded device ids
-        generate_rbi_reports(1, rbiReportsDao);
-        generate_rbi_reports(2, rbiReportsDao);        
+        generate_rbi_reports(1, rbiReportsDao, cache);
+        generate_rbi_reports(2, rbiReportsDao, cache);        
         std::cout << "Finished RBI risk calculation at " << get_current_timestamp() << std::endl;
-        usleep(3000000); // 3-second delay
+        usleep(three_sec_delay);
     }
     return 0;
 }

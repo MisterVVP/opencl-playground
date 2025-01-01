@@ -39,11 +39,14 @@ Install dependencies, e.g. for Ubuntu
 apt update && apt upgrade && apt install -y cmake git ninja-build opencl-headers opencl-clhpp-headers ocl-icd-opencl-dev libpq-dev build-essential
 ```
 
-Build app in new shell
+Build app in new shell (includes installation of hiredis and msgpack)
 ```
 cd simplified-rbi-system/rbi
 cmake . -G Ninja -DCMAKE_BUILD_TYPE=Release -B ./build \
-    && cd ./build \
+    && cd ./build/_deps/hiredis-src && sudo make install \
+    && cd ../msgpack-src && cmake -DMSGPACK_CXX20=ON . \
+    && sudo cmake --build . --target install \
+    && cd ../../../build \
     && ninja
 ```
 
@@ -51,12 +54,15 @@ Run it from host machine
 ```
 export POSTGRES_CONNECTION_STRING=postgresql://postgres:postgres@localhost:5432/metrics \
 export USE_DOCKERIZED_POSTGRES=1 \
+export REDIS_PORT=6379 \
+export REDIS_HOST=localhost \
 && ./src/rbi
 ```
 
 ## TODO
 - Smaller docker images. Debian?
 - Find if it's possible to run simplified-rbi-system/rbi inside Docker as well (now it runs on host due to GPU dependency)
+- Check how to use package managers for C++ (e.g. https://conan.io/center/recipes/msgpack-cxx)
 - More coding samples
 - Compare calculation performance between GPU and CPU for various tasks
 - Write something to execute OpenCL on AMD Ryzen CPU. This may require POCL instead https://portablecl.org/

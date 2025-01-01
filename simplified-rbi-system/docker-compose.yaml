@@ -63,5 +63,11 @@ services:
     depends_on:
       - db
 
+  redis:
+    image: redis:6
+    container_name: redis
+    ports:
+      - "6379:6379"
+
 volumes:
   postgres_data:

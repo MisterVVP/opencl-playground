@@ -2,6 +2,8 @@
 
 using namespace Dao;
 
+// TODO change from hardcode to argument in fetchMetricData
+const char *FETCH_METRICS_INTERVAL = "5 minutes";
 
 Dao::RBIReportsDao::RBIReportsDao(char const* psql_conn_str) {
     if (!psql_conn_str) {
@@ -34,8 +36,8 @@ void Dao::RBIReportsDao::insertRBIReport(int device_id, float risk_index, const 
 }
 
 std::vector<float> Dao::RBIReportsDao::fetchMetricData(int metric_id, int device_id) {
-    std::ostringstream query;
-    query << "SELECT value FROM sensor_readings WHERE metric_id = " << metric_id << " AND device_id = " << device_id << ";";
+    std::ostringstream query;    
+    query << "SELECT value FROM sensor_readings WHERE metric_id = " << metric_id << " AND device_id = " << device_id << " AND timestamp >= NOW() - INTERVAL '" << FETCH_METRICS_INTERVAL << "';";
 
     PGresult *res = PQexec(conn, query.str().c_str());
     std::vector<float> data;
