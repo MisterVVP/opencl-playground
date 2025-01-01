@@ -65,6 +65,7 @@ export REDIS_HOST=localhost \
 - Smaller docker images. Debian?
 - Find if it's possible to run simplified-rbi-system/rbi inside Docker as well (now it runs on host due to GPU dependency)
 - Check how to use package managers for C++ (e.g. https://conan.io/center/recipes/msgpack-cxx)
+- Check how to setup unit tests and prometheus metrics endpoint
 - More coding samples
 - Compare calculation performance between GPU and CPU for various tasks
 - Write something to execute OpenCL on AMD Ryzen CPU. This may require POCL instead https://portablecl.org/
